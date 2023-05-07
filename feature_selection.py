@@ -2,47 +2,59 @@ from sdf import SDF
 import seaborn as sns
 import matplotlib.pyplot as plt
 import pandas as pd
-from sklearn.linear_model import LassoCV
-from sklearn.linear_model import Lasso
-from sklearn.model_selection import cross_validate
-from sklearn.model_selection import RepeatedKFold
+from sklearn.linear_model import (
+    ElasticNetCV,
+    ElasticNet,
+    Lasso,
+    LassoCV,
+    Ridge,
+    RidgeCV,
+)
+from sklearn.model_selection import cross_validate, RepeatedKFold
 import numpy as np
-from regression import RegressionAnalysis
 
 sns.set(style="darkgrid")
 
 
 class FeatureSelection(SDF):
-    def lasso_regression(self, folds=5, best_features=20, repeats=5):
+    def elastic_net_regression(self, folds=5, best_features=20, repeats=5, l1_ratio=1):
 
-        # Lasso Regression
-        model = LassoCV(cv=folds, random_state=0, max_iter=10000)
+        # ElasticNet Regression
+
+        if l1_ratio == 1:
+            model = LassoCV(cv=folds, random_state=0, max_iter=10000)
+        elif l1_ratio == 0:
+            model = RidgeCV(cv=folds)
+        else:
+            model = ElasticNetCV(
+                cv=folds, random_state=0, max_iter=10000, l1_ratio=l1_ratio
+            )
+
         model.fit(self.df.drop(columns=[self.label_column]), self.df[self.label_column])
         coef = pd.Series(
             model.coef_, index=self.df.drop(columns=[self.label_column]).columns
         )
 
         # Printing the results for the best alpha
-        print("Best alpha using built-in LassoCV: %f" % model.alpha_)
         print(
-            "Best score using built-in LassoCV: %f"
+            "For ElasticNetCV with l1 ratio = "
+            + str(l1_ratio)
+            + ", the best alpha is "
+            + str(model.alpha_)
+        )
+        print(
+            "Best score using built-in ElasticNetCV: %f"
             % model.score(
                 self.df.drop(columns=[self.label_column]), self.df[self.label_column]
             )
         )
         print(
-            "Lasso picked "
+            "ElasticNetCV picked "
             + str(sum(coef != 0))
             + " variables and eliminated the other "
             + str(sum(coef == 0))
             + " variables"
         )
-
-        # Print the selected features and their coefficients
-        print("Selected features: ")
-        for i in range(len(coef)):
-            if coef[i] != 0:
-                print(self.df.drop(columns=[self.label_column]).columns[i], coef[i])
 
         # Analyze the regression
         print(self.get_model_statistics(model).summary())
@@ -71,11 +83,16 @@ class FeatureSelection(SDF):
         plt.axvline(x=0, color=".5")
         plt.xlabel("Coefficient importance")
         plt.title("Coefficient importance and its variability")
-        self.savefig_or_show(True, "lasso_features_best_alpha.png")
+        self.savefig_or_show(True, "elastic_features_best_alpha.png")
 
         # Plotting the feature coefficients for different alphas
         alphas = np.linspace(0.01, 500, 20)
-        lasso = Lasso(max_iter=10000)
+        lasso = ElasticNet(max_iter=10000, l1_ratio=l1_ratio)
+        if l1_ratio == 1:
+            lasso = Lasso(max_iter=10000)
+        elif l1_ratio == 0:
+            lasso = Ridge(max_iter=10000)
+
         coefs = []
 
         for a in alphas:
@@ -96,5 +113,5 @@ class FeatureSelection(SDF):
         plt.axis("tight")
         plt.xlabel("alpha")
         plt.ylabel("Standardized Coefficients")
-        plt.title("Lasso coefficients as a function of alpha")
-        self.savefig_or_show(True, "lasso_features_alpha.png")
+        plt.title("ElasticNet coefficients as a function of alpha")
+        self.savefig_or_show(True, "elastic_features_alpha.png")
