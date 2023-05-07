@@ -1,6 +1,7 @@
 from statsmodels.tools.tools import pinv_extended
 import statsmodels.api as sm
 import sklearn, statsmodels
+import numpy as np
 
 class RegressionAnalysis:
 
@@ -11,7 +12,7 @@ class RegressionAnalysis:
         self.features = features
 
 
-    def get_model_statistics(model):
+    def get_model_statistics(self, model):
         
         is_statsmodels = False
         is_sklearn = False
