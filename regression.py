@@ -2,15 +2,9 @@ from statsmodels.tools.tools import pinv_extended
 import statsmodels.api as sm
 import sklearn, statsmodels
 import numpy as np
+from sdf import SDF
 
-class RegressionAnalysis:
-
-
-    def __init__(self, labels, features):
-
-        self.labels = labels
-        self.features = features
-
+class RegressionAnalysis(SDF):
 
     def get_model_statistics(self, model):
         

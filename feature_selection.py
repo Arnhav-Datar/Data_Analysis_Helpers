@@ -3,8 +3,11 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import pandas as pd
 from sklearn.linear_model import LassoCV
+from sklearn.linear_model import Lasso
 from sklearn.model_selection import cross_validate
 from sklearn.model_selection import RepeatedKFold
+import numpy as np
+from regression import RegressionAnalysis
 sns.set(style="darkgrid")
 
 class FeatureSelection(SDF):
@@ -27,10 +30,11 @@ class FeatureSelection(SDF):
             if coef[i] != 0:
                 print(self.df.drop(columns=[self.label_column]).columns[i], coef[i])
 
+        # Analyze the regression
+        print(self.get_model_statistics(model).summary())
+
         # PLotting the feature coefficients
         figsize=(10, 10)
-
-
         cv_model = cross_validate(
             model, self.features, self.labels, cv=RepeatedKFold(n_splits=folds, n_repeats=repeats, random_state=0),
             return_estimator=True, n_jobs=5
@@ -49,7 +53,24 @@ class FeatureSelection(SDF):
         plt.axvline(x=0, color='.5')
         plt.xlabel('Coefficient importance')
         plt.title('Coefficient importance and its variability')
-        self.savefig_or_show(True, "lasso_regression.png")
+        self.savefig_or_show(True, "lasso_features_best_alpha.png")
 
+        # Plotting the feature coefficients for different alphas
+        alphas = np.linspace(0.01,500,20)
+        lasso = Lasso(max_iter=10000)
+        coefs = []
 
+        for a in alphas:
+            lasso.set_params(alpha=a)
+            lasso.fit(self.df.drop(columns=[self.label_column]), self.df[self.label_column])
+            coefs.append(lasso.coef_)
 
+        coefs = pd.DataFrame(coefs, index = alphas, columns = self.df.drop(columns=[self.label_column]).columns)
+        ax = plt.gca()
+        sns.lineplot(data= coefs, palette="tab10", linewidth=2.5)
+        ax.set_xscale('log')
+        plt.axis('tight')
+        plt.xlabel('alpha')
+        plt.ylabel('Standardized Coefficients')
+        plt.title('Lasso coefficients as a function of alpha')
+        self.savefig_or_show(True, "lasso_features_alpha.png")
