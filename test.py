@@ -34,7 +34,7 @@ pl.plot_single(
 )
 pl.plot_all(save=True, height=7, filename="penguin_all.png")
 pl.plot_heatmap_correlations(save=True, filename="penguin_heatmap_correlations.png")
-pl.plot_residuals({"bill_length_mm": 2, "bill_depth_mm": 2, "flipper_length_mm": 2})
+pl.plot_residuals({"bill_length_mm": 2, "bill_depth_mm": 1, "flipper_length_mm": 1})
 
 # sample N points from normal distribution
 N = 1000

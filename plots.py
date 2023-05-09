@@ -5,8 +5,13 @@ import pandas as pd
 from typing import List, Dict, Tuple, Optional
 import os
 import os.path as osp
+import statsmodels.regression.linear_model as sm
+import statsmodels.api as sm1
+from scipy import stats
 import warnings
 from sdf import SDF
+import pylab
+import numpy as np
 
 sns.set(style="darkgrid")
 
@@ -131,6 +136,20 @@ class Plot(SDF):
                 y=self.df.columns[-1],
                 lowess=True,
                 line_kws=dict(color="r"),
+                order = feature_orders[feature],
             )
             plt.title(f"Residuals of {feature} vs {self.labels.name}")
             self.savefig_or_show(True, osp.join(sub_folder, f"residuals_{feature}.png"))
+
+        # Get the qq plots of the model
+
+        for feature in feature_orders:
+            # Doing a polynomial regression
+            formula = f"{self.label_column} ~ {feature}**{feature_orders[feature]}"
+            print(formula)
+            reg = sm.OLS.from_formula(formula, data=self.df).fit()
+            residuals = np.asarray(reg.resid.tolist())
+            residuals /= np.std(residuals, ddof=1)
+            sm1.qqplot(residuals, line = '45')
+            plt.title(formula)
+            self.savefig_or_show(True, osp.join(sub_folder, f"qq_{feature}.png"))
