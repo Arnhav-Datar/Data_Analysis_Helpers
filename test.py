@@ -9,32 +9,32 @@ from feature_selection import FeatureSelection
 
 sns.set_style("darkgrid")
 
-penguins = sns.load_dataset("penguins")
-pl = Plot(
-    penguins[
-        [
-            "species",
-            "island",
-            "bill_length_mm",
-            "bill_depth_mm",
-            "flipper_length_mm",
-            "body_mass_g",
-        ]
-    ],
-    plot_folder="./plots/",
-)
-pl.plot_single(
-    x="bill_length_mm",
-    y="bill_depth_mm",
-    title="Penguin Bill Length vs. Depth",
-    axis_labels=("Bill Length (mm)", "Bill Depth (mm)"),
-    save=True,
-    height=7,
-    filename="penguin_bill_length_vs_depth.png",
-)
-pl.plot_all(save=True, height=7, filename="penguin_all.png")
-pl.plot_heatmap_correlations(save=True, filename="penguin_heatmap_correlations.png")
-pl.plot_residuals({"bill_length_mm": 2, "bill_depth_mm": 1, "flipper_length_mm": 1})
+# penguins = sns.load_dataset("penguins")
+# pl = Plot(
+#     penguins[
+#         [
+#             "species",
+#             "island",
+#             "bill_length_mm",
+#             "bill_depth_mm",
+#             "flipper_length_mm",
+#             "body_mass_g",
+#         ]
+#     ],
+#     plot_folder="./plots/",
+# )
+# pl.plot_single(
+#     x="bill_length_mm",
+#     y="bill_depth_mm",
+#     title="Penguin Bill Length vs. Depth",
+#     axis_labels=("Bill Length (mm)", "Bill Depth (mm)"),
+#     save=True,
+#     height=7,
+#     filename="penguin_bill_length_vs_depth.png",
+# )
+# pl.plot_all(save=True, height=7, filename="penguin_all.png")
+# pl.plot_heatmap_correlations(save=True, filename="penguin_heatmap_correlations.png")
+# pl.plot_residuals({"bill_length_mm": 2, "bill_depth_mm": 1, "flipper_length_mm": 1})
 
 # sample N points from normal distribution
 N = 1000
@@ -52,4 +52,5 @@ for i in range(15):
 df["y"] = y
 
 fs = FeatureSelection(df, plot_folder="./plots/")
-fs.elastic_net_regression(l1_ratio=0)
+# fs.elastic_net_regression(l1_ratio=0)
+fs.lightgbm()

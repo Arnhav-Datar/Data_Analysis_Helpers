@@ -136,7 +136,7 @@ class Plot(SDF):
                 y=self.df.columns[-1],
                 lowess=True,
                 line_kws=dict(color="r"),
-                order = feature_orders[feature],
+                order=feature_orders[feature],
             )
             plt.title(f"Residuals of {feature} vs {self.labels.name}")
             self.savefig_or_show(True, osp.join(sub_folder, f"residuals_{feature}.png"))
@@ -150,6 +150,6 @@ class Plot(SDF):
             reg = sm.OLS.from_formula(formula, data=self.df).fit()
             residuals = np.asarray(reg.resid.tolist())
             residuals /= np.std(residuals, ddof=1)
-            sm1.qqplot(residuals, line = '45')
+            sm1.qqplot(residuals, line="45")
             plt.title(formula)
             self.savefig_or_show(True, osp.join(sub_folder, f"qq_{feature}.png"))
