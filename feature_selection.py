@@ -196,6 +196,7 @@ class FeatureSelection(SDF):
             'task': 'train',
             'boosting_type': 'gbdt',
             'objective': 'regression',
+            'learning_rate': lr,
         }
 
         ret = lgb.cv(
@@ -218,5 +219,3 @@ class FeatureSelection(SDF):
             print(f"# fold {i} RMSE: {rmse(y_true, y_pred)}")
 
         plot_importance(ret["cvbooster"], figsize=(10, 20))
-
-    

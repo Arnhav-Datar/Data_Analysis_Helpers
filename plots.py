@@ -25,7 +25,7 @@ class Plot(SDF):
         axis_labels: Tuple[str, str] = ["", ""],
         save: bool = True,
         height: int = 7,
-        filename: str = "",
+        filename: str = "jointplot",
     ):
 
         g = sns.jointplot(
@@ -49,14 +49,14 @@ class Plot(SDF):
         g.set_axis_labels(axis_labels[0], axis_labels[1], fontsize=16)
         g.fig.suptitle("Jointplot of " + title, fontsize=16)
         g.fig.subplots_adjust(top=0.95)
-        self.savefig_or_show(save, filename)
+        self.savefig_or_show(save, filename + ".png")
 
     def plot_all(
         self,
         title: str = "",
         save: bool = True,
         height: int = 7,
-        filename: str = "",
+        filename: str = "pairplot",
     ):
         """
         Plots all features against each other in a pairplot
@@ -72,37 +72,60 @@ class Plot(SDF):
         g.fig.suptitle("Pairplot of " + title, fontsize=16)
         g.fig.tight_layout()
         g.fig.subplots_adjust(top=0.95)
-        self.savefig_or_show(save, filename)
+        self.savefig_or_show(save, filename + ".png")
 
     def plot_heatmap_correlations(
         self,
         annot: bool = True,
         save: bool = True,
-        filename: str = "",
+        filename: str = "correlations",
         min_max: Tuple[float, float] = (-1, 1),
+        modes: List[str] = ["pearson", "kendall", "spearman", "beta"],
     ):
 
         """
         Get a heatmap for the correlations between features
         """
 
-        corr = self.df.corr()
-        f, ax = plt.subplots(figsize=(9, 6))
-        g = sns.heatmap(
-            corr,
-            annot=annot,
-            linewidths=0.5,
-            ax=ax,
-            vmin=min_max[0],
-            vmax=min_max[1],
-        )
-        self.savefig_or_show(save, filename)
+        corr = self.df.corr(numeric_only=True)
+        ln = corr.shape[0]
+        clms = corr.columns
+
+        for md in modes:
+
+            if md == "beta":
+                
+                for i in range(ln):
+                    for j in range(ln):
+                        col1, col2 = clms[i], clms[j]
+                        cov = np.cov(self.df[col1], self.df[col2])
+                        corr.iat[i, j] = cov[0, 1] / cov[0, 0]
+
+            else:
+                corr = self.df.corr(method = md, numeric_only=True)
+            
+            
+            _, ax = plt.subplots(figsize=(9, 6))
+            g = sns.heatmap(
+                corr,
+                annot=annot,
+                linewidths=0.5,
+                ax=ax,
+                vmin=min_max[0],
+                vmax=min_max[1],
+            )
+
+            g.set_xticklabels(g.get_yticklabels(), rotation=20, horizontalalignment="right")
+            g.set_yticklabels(g.get_yticklabels(), rotation=20, horizontalalignment="right")
+
+            plt.title(f"Correlations ({md})")
+            self.savefig_or_show(save, filename + "_" + md + ".png")
 
     def plot_timeseries(
         self,
         features: Optional[List[str]] = None,
         save: bool = True,
-        filename: str = "",
+        filename: str = "time_series",
     ):
         """
         Plot a timeseries
@@ -110,12 +133,12 @@ class Plot(SDF):
         if features is None:
             features = self.df.columns
         g = sns.lineplot(data=self.df[features], palette="tab10", linewidth=2.5)
-        self.savefig_or_show(save, filename)
+        self.savefig_or_show(save, filename + ".png")
 
     def plot_residuals(
         self,
         feature_orders: Dict[str, int] = {},
-        sub_folder: str = "",
+        sub_folder: str = "residuals",
     ):
         """
         Plot the residuals of the model
@@ -123,9 +146,6 @@ class Plot(SDF):
 
         if feature_orders == {}:
             feature_orders = {feature: 1 for feature in self.features.columns}
-
-        if sub_folder == "":
-            sub_folder = "residuals"
 
         self.safe_mkdir(osp.join(self.plot_folder, sub_folder))
 
