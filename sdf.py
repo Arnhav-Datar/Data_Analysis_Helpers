@@ -14,31 +14,42 @@ import warnings
 class SDF:
     def __init__(
         self,
-        features: pd.DataFrame,
-        labels: Optional[pd.Series] = None,
+        df: pd.DataFrame,
+        label_cols: List[str],
+        feature_cols: List[str] = None,
         plot_folder: str = "",
         plot_format: str = "png",
         feature_descriptions: Optional[Dict[str, str]] = None,
-        dataframe_name: str = "dataframe",
     ):
 
-        self.labels = labels
-        self.features = features
+        '''
+        Initialize the SDF object
+        df: pandas dataframe
+        label_cols: list of column names of the labels
+        feature_cols: list of column names of the features
+        plot_folder: folder to save plots
+        plot_format: format of the plots
+        feature_descriptions: dictionary of feature descriptions
+        '''
 
-        if self.labels is None:
-            warnings.warn("No label column provided. Taking last column as label!")
-            self.labels = self.features[self.features.columns[-1]]
-            self.features = self.features.drop([self.features.columns[-1]], axis=1)
+        self.df = df
+
+        self.label_cols = label_cols
+        self.labels = self.df[label_cols]
+
+        if feature_cols is None:
+            self.feature_cols = self.df.columns.drop(label_cols)
+            self.features = self.df.drop(label_cols, axis=1)
+        else:
+            self.feature_cols = feature_cols
+            self.features = self.df[feature_cols]
 
         self.plot_folder = plot_folder
         self.plot_format = plot_format
         self.feature_descriptions = feature_descriptions
-        self.dataframe_name = dataframe_name
 
-        if self.labels is not None:
-            self.df = pd.concat([self.features, self.labels], axis=1)
-        else:
-            self.df = self.features
+        if self.feature_descriptions is not None:
+            self.print_feature_descriptions()
 
         if self.plot_folder == "":
             self.plot_folder = "./plots/"
@@ -47,23 +58,66 @@ class SDF:
         self.label_column = self.df.columns[-1]
 
     def safe_mkdir(self, path):
+        '''
+        Create a directory if it does not exist
+        '''
         if not osp.exists(path):
             os.makedirs(path)
 
-    def savefig_or_show(self, save: bool, filename: str):
-        if save:
+    def print_feature_descriptions(
+        self,
+    ):
+        '''
+        Print the feature and label descriptions
+        '''
+
+        print("The features are ")
+        for feature in self.feature_cols:
+            print(feature + ": " + self.feature_descriptions[feature])
+
+        print("====================================")
+        
+        print("The labels are ")
+        for label in self.label_cols:
+            print(label + ": " + self.feature_descriptions[label])
+            
+
+    def savefig_or_show(
+        self,
+        filename: str = None,
+    ):
+        '''
+        Save the figure or show it
+        '''
+        if filename is not None:
             plt.savefig(osp.join(self.plot_folder, filename), format=self.plot_format)
             plt.clf()
         else:
             plt.show()
 
-    def get_model_statistics(self, model):
+    def get_model_statistics(
+        self,
+        model,
+        features: pd.DataFrame = None,
+        label: str = None,
+    ):
+
+        '''
+        Get the model statistics
+        model: linear model
+        '''
 
         is_statsmodels = False
         is_sklearn = False
         has_intercept = False
-        X = self.features
-        y = self.labels
+        X = features
+
+        if label is None:
+            y = self.labels[self.label_cols[0]]
+        else:
+            y = self.labels[label]
+
+        y = list(y)
 
         # check for accepted linear models
         if type(model) in [
@@ -108,3 +162,45 @@ class SDF:
         return sm.regression.linear_model.OLSResults(
             olsModel, model_params, normalized_cov_params
         )
+
+    def get_correlations(self):
+        '''
+        Get the correlations
+        '''
+        
+        cr = self.df.corr()[self.label_cols]
+        cr = cr.drop(self.label_cols, axis=0)
+        sns.heatmap(
+            cr,
+            annot=True
+        )
+        self.savefig_or_show()
+
+    def two_dimensions_plot(
+        self,
+        plot_func,  
+        xsplit_col: str,
+        ysplit_col: str = None,
+    ):
+
+        # get the unique values of the split columns
+        xsplit_vals = self.df[xsplit_col].unique()
+        ysplit_vals = self.df[ysplit_col].unique()
+
+        # set the plot size
+        plt.figure(figsize=(5 * len(xsplit_vals), 5 * len(ysplit_vals)))
+
+        # Iterate over the unique values of the split columns
+        for i, xsplit_val in enumerate(xsplit_vals):
+            for j, ysplit_val in enumerate(ysplit_vals):
+                # select the data with the unique values of the split columns
+                df = self.df[
+                    (self.df[xsplit_col] == xsplit_val)
+                    & (self.df[ysplit_col] == ysplit_val)
+                ]
+                # plot the data
+                plt.subplot(len(xsplit_vals), len(ysplit_vals), i * len(ysplit_vals) + j + 1)
+                plot_func(df)
+                plt.title(xsplit_col + ": " + str(xsplit_val) + ", " + ysplit_col + ": " + str(ysplit_val))
+
+        plt.show()
