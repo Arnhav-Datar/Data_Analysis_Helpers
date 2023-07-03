@@ -180,15 +180,29 @@ class SDF:
         self,
         plot_func,  
         xsplit_col: str,
-        ysplit_col: str = None,
+        ysplit_col: str,
+        xsplit_subset: List[str] = None,
+        ysplit_subset: List[str] = None,
+        title: str = "",
     ):
 
         # get the unique values of the split columns
         xsplit_vals = self.df[xsplit_col].unique()
         ysplit_vals = self.df[ysplit_col].unique()
 
+        # take the subset of the unique values if specified
+        if xsplit_subset is not None:
+            xsplit_vals = xsplit_subset
+        if ysplit_subset is not None:
+            ysplit_vals = ysplit_subset
+
+        # sort the unique values
+        xsplit_vals.sort()
+        ysplit_vals.sort()
+
         # set the plot size
-        plt.figure(figsize=(5 * len(xsplit_vals), 5 * len(ysplit_vals)))
+        fig, axes = plt.subplots(len(xsplit_vals), len(ysplit_vals), figsize=(5 * len(xsplit_vals), 5 * len(ysplit_vals)))
+        fig.suptitle(title)
 
         # Iterate over the unique values of the split columns
         for i, xsplit_val in enumerate(xsplit_vals):
@@ -199,8 +213,8 @@ class SDF:
                     & (self.df[ysplit_col] == ysplit_val)
                 ]
                 # plot the data
-                plt.subplot(len(xsplit_vals), len(ysplit_vals), i * len(ysplit_vals) + j + 1)
-                plot_func(df)
-                plt.title(xsplit_col + ": " + str(xsplit_val) + ", " + ysplit_col + ": " + str(ysplit_val))
+                ax = axes[i, j]
+                plot_func(df, ax)
+                ax.set_title(xsplit_col + ": " + str(xsplit_val) + ", " + ysplit_col + ": " + str(ysplit_val))
 
         plt.show()
