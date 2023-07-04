@@ -10,6 +10,10 @@ import sklearn, statsmodels
 import numpy as np
 import warnings
 
+warnings.filterwarnings("ignore")
+
+sns.set_style("darkgrid")
+
 
 class SDF:
     def __init__(
@@ -202,7 +206,10 @@ class SDF:
 
         # set the plot size
         fig, axes = plt.subplots(len(xsplit_vals), len(ysplit_vals), figsize=(5 * len(xsplit_vals), 5 * len(ysplit_vals)))
-        fig.suptitle(title)
+        if title != "":
+            fig.suptitle(title)
+        else:
+            fig.suptitle("Splitting by " + xsplit_col + " and " + ysplit_col)
 
         # Iterate over the unique values of the split columns
         for i, xsplit_val in enumerate(xsplit_vals):
@@ -214,7 +221,9 @@ class SDF:
                 ]
                 # plot the data
                 ax = axes[i, j]
-                plot_func(df, ax)
+                plot_func(df, ax, self)
                 ax.set_title(xsplit_col + ": " + str(xsplit_val) + ", " + ysplit_col + ": " + str(ysplit_val))
 
+        # Make the plot tight
+        plt.tight_layout()
         plt.show()
