@@ -6,12 +6,12 @@ import os
 import os.path as osp
 from statsmodels.tools.tools import pinv_extended
 import statsmodels.api as sm
+from tabulate import tabulate
 import sklearn, statsmodels
 import numpy as np
 import warnings
 
 warnings.filterwarnings("ignore")
-
 sns.set_style("darkgrid")
 
 
@@ -26,7 +26,7 @@ class SDF:
         feature_descriptions: Optional[Dict[str, str]] = None,
     ):
 
-        '''
+        """
         Initialize the SDF object
         df: pandas dataframe
         label_cols: list of column names of the labels
@@ -34,7 +34,7 @@ class SDF:
         plot_folder: folder to save plots
         plot_format: format of the plots
         feature_descriptions: dictionary of feature descriptions
-        '''
+        """
 
         self.df = df
 
@@ -62,37 +62,36 @@ class SDF:
         self.label_column = self.df.columns[-1]
 
     def safe_mkdir(self, path):
-        '''
+        """
         Create a directory if it does not exist
-        '''
+        """
         if not osp.exists(path):
             os.makedirs(path)
 
     def print_feature_descriptions(
         self,
     ):
-        '''
+        """
         Print the feature and label descriptions
-        '''
+        """
 
         print("The features are ")
         for feature in self.feature_cols:
             print(feature + ": " + self.feature_descriptions[feature])
 
         print("====================================")
-        
+
         print("The labels are ")
         for label in self.label_cols:
             print(label + ": " + self.feature_descriptions[label])
-            
 
     def savefig_or_show(
         self,
         filename: str = None,
     ):
-        '''
+        """
         Save the figure or show it
-        '''
+        """
         if filename is not None:
             plt.savefig(osp.join(self.plot_folder, filename), format=self.plot_format)
             plt.clf()
@@ -106,10 +105,10 @@ class SDF:
         label: str = None,
     ):
 
-        '''
+        """
         Get the model statistics
         model: linear model
-        '''
+        """
 
         is_statsmodels = False
         is_sklearn = False
@@ -160,6 +159,11 @@ class SDF:
                 x = X
                 model_params = model.coef_
 
+            # only keep the non-zero coefficients
+            model_params = model_params[np.nonzero(model_params)]
+            # only keep the non-zero features
+            x = x.iloc[:, np.nonzero(model_params)[0]]
+
         olsModel = sm.OLS(y, x)
         pinv_wexog, _ = pinv_extended(x)
         normalized_cov_params = np.dot(pinv_wexog, np.transpose(pinv_wexog))
@@ -167,22 +171,106 @@ class SDF:
             olsModel, model_params, normalized_cov_params
         )
 
+    def explore_dataframe(
+        self,
+        print_stats: bool = True,
+        plot_correlations: bool = True,
+        plot_distribution: bool = True,
+        print_unique_value: bool = True,
+        print_nan_value: bool = True,
+        value_count: int = 5,
+    ):
+        """
+        Explore the dataframe
+        """
+
+        if plot_correlations:
+            self.get_correlations()
+        if plot_distribution:
+
+            _, ax = plt.subplots(figsize=(7, 6))
+            ax.set_xscale("log")
+
+            # Plot the orbital period with horizontal boxes
+            sns.boxplot(
+                data=self.features,
+                whis=[0, 100],
+                width=0.6,
+                palette="vlag",
+                ax=ax,
+                orient="h",
+            )
+            sns.stripplot(
+                data=self.features, size=4, color=".3", linewidth=0, ax=ax, orient="h"
+            )
+
+            # Tweak the visual presentation
+            ax.xaxis.grid(True)
+            sns.despine(trim=True, left=True)
+            ax.set_title("Distribution of features")
+
+            plt.show()
+
+        if print_stats:
+
+            print("====================================")
+            print("The summary statistics are")
+            print("====================================")
+            print(tabulate(self.df.describe(), headers="keys", tablefmt="psql"))
+
+        if print_unique_value:
+
+            print("====================================")
+            print("The unique values are")
+            print("====================================")
+
+            dc = {}
+            for col in self.df.columns:
+                dc[col] = list(self.df[col].unique())
+
+            print(
+                tabulate(
+                    pd.DataFrame(dc.items(), columns=["Column", "Unique Count"])
+                    .sort_values(by="Unique Count", key=lambda col: col.apply(len))
+                    .head(value_count),
+                    headers="keys",
+                    tablefmt="psql",
+                )
+            )
+
+        if print_nan_value:
+
+            print("====================================")
+            print("The nan values are")
+            print("====================================")
+
+            dc = {}
+            for col in self.df.columns:
+                dc[col] = self.df[col].isna().sum() / len(self.df[col])
+
+            print(
+                tabulate(
+                    pd.DataFrame(dc.items(), columns=["Column", "Nan Count"])
+                    .sort_values(by="Nan Count", ascending=False)
+                    .head(value_count),
+                    headers="keys",
+                    tablefmt="psql",
+                )
+            )
+
     def get_correlations(self):
-        '''
+        """
         Get the correlations
-        '''
-        
+        """
+
         cr = self.df.corr()[self.label_cols]
         cr = cr.drop(self.label_cols, axis=0)
-        sns.heatmap(
-            cr,
-            annot=True
-        )
+        sns.heatmap(cr, annot=True)
         self.savefig_or_show()
 
     def two_dimensions_plot(
         self,
-        plot_func,  
+        plot_func,
         xsplit_col: str,
         ysplit_col: str,
         xsplit_subset: List[str] = None,
@@ -205,7 +293,11 @@ class SDF:
         ysplit_vals.sort()
 
         # set the plot size
-        fig, axes = plt.subplots(len(xsplit_vals), len(ysplit_vals), figsize=(5 * len(xsplit_vals), 5 * len(ysplit_vals)))
+        fig, axes = plt.subplots(
+            len(xsplit_vals),
+            len(ysplit_vals),
+            figsize=(5 * len(xsplit_vals), 5 * len(ysplit_vals)),
+        )
         if title != "":
             fig.suptitle(title)
         else:
@@ -222,7 +314,15 @@ class SDF:
                 # plot the data
                 ax = axes[i, j]
                 plot_func(df, ax, self)
-                ax.set_title(xsplit_col + ": " + str(xsplit_val) + ", " + ysplit_col + ": " + str(ysplit_val))
+                ax.set_title(
+                    xsplit_col
+                    + ": "
+                    + str(xsplit_val)
+                    + ", "
+                    + ysplit_col
+                    + ": "
+                    + str(ysplit_val)
+                )
 
         # Make the plot tight
         plt.tight_layout()
